@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis Gastos Mensuales</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f13;
+    --surface: #16181f;
+    --surface2: #1e2029;
+    --border: #2a2d3a;
+    --accent: #c8f55a;
+    --accent2: #5af5c8;
+    --accent3: #f55a8a;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --paid: #5af5c8;
+    --unpaid: #f55a8a;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+
+  header { padding: 28px 32px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+
+  .month-nav { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 8px 16px; }
+  .month-nav button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; transition: transform .15s; }
+  .month-nav button:hover { transform: scale(1.2); }
+  #monthLabel { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; min-width: 160px; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+
+  .summary { display: flex; gap: 12px; padding: 24px 32px 0; flex-wrap: wrap; }
+  .summary-card { flex: 1; min-width: 140px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+  .summary-card .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+  .summary-card .value { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 22px; }
+  .summary-card .value.green { color: var(--paid); }
+  .summary-card .value.red { color: var(--unpaid); }
+  .summary-card .value.yellow { color: var(--accent); }
+
+  .progress-wrap { padding: 20px 32px 0; }
+  .progress-bar { height: 6px; background: var(--surface2); border-radius: 100px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 100px; transition: width .5s ease; }
+  .progress-label { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  .toolbar { display: flex; gap: 10px; padding: 24px 32px 0; flex-wrap: wrap; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; padding: 9px 18px; border-radius: 100px; border: 1px solid var(--border); cursor: pointer; transition: all .15s; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #0e0f13; border-color: var(--accent); font-weight: 700; }
+  .btn-primary:hover { background: #d8ff6a; }
+  .btn-ghost { background: transparent; color: var(--muted); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-ghost.active { background: var(--surface2); color: var(--accent); border-color: var(--accent); }
+  .filter-group { display: flex; gap: 6px; margin-left: auto; }
+
+  .table-wrap { padding: 20px 32px 100px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  thead th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 14px 14px; font-size: 13px; vertical-align: middle; }
+
+  .cat-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 4px 11px; font-size: 11px; }
+  .cat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .amount { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 15px; }
+
+  .status-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; width: fit-content; }
+  .toggle-pill { width: 42px; height: 22px; border-radius: 100px; border: 1.5px solid var(--border); background: var(--surface); position: relative; transition: all .2s; flex-shrink: 0; }
+  .toggle-pill::after { content: ''; position: absolute; top: 3px; left: 3px; width: 13px; height: 13px; border-radius: 50%; background: var(--muted); transition: all .2s; }
+  .toggle-pill.paid { background: rgba(90,245,200,.12); border-color: var(--paid); }
+  .toggle-pill.paid::after { left: calc(100% - 16px); background: var(--paid); }
+  .status-text { font-size: 11px; color: var(--muted); }
+  .status-text.paid { color: var(--paid); }
+
+  .receipt-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .receipt-btn { display: inline-flex; align-items: center; gap: 5px; font-family: 'DM Mono', monospace; font-size: 11px; padding: 5px 11px; border-radius: 8px; border: 1px dashed var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all .15s; }
+  .receipt-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .receipt-thumb { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--accent2); background: rgba(90,245,200,.1); border: 1px solid rgba(90,245,200,.25); border-radius: 8px; padding: 4px 10px; cursor: pointer; transition: all .15s; max-width: 140px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .receipt-thumb:hover { background: rgba(90,245,200,.2); }
+
+  .actions-cell { display: flex; gap: 6px; }
+  .icon-btn { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all .15s; }
+  .icon-btn:hover { background: var(--surface2); color: var(--unpaid); border-color: var(--unpaid); }
+
+  .empty-row td { text-align: center; padding: 48px 0; color: var(--muted); font-size: 13px; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity .2s; padding: 20px; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 480px; padding: 28px; transform: translateY(12px); transition: transform .2s; }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 22px; }
+  .modal-title span { color: var(--accent); }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 6px; }
+  .field input, .field select, .field textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 10px 13px; outline: none; transition: border-color .15s; appearance: none; }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field select option { background: var(--surface); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+  .modal-actions .btn-cancel { background: none; border: 1px solid var(--border); color: var(--muted); padding: 9px 20px; border-radius: 100px; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 12px; transition: all .15s; }
+  .modal-actions .btn-cancel:hover { background: var(--surface2); color: var(--text); }
+
+  .receipt-img { max-width: 100%; border-radius: 10px; border: 1px solid var(--border); margin-top: 12px; }
+  .receipt-pdf-link { display: block; color: var(--accent2); text-decoration: underline; font-size: 13px; margin-top: 12px; word-break: break-all; }
+
+  .notif { position: fixed; bottom: 28px; right: 28px; background: var(--surface); border: 1px solid var(--accent); border-radius: 12px; padding: 14px 20px; font-size: 13px; color: var(--accent); z-index: 9999; transform: translateY(60px); opacity: 0; transition: all .25s; pointer-events: none; }
+  .notif.show { transform: translateY(0); opacity: 1; }
+
+  .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 9998; flex-direction: column; gap: 16px; transition: opacity .3s; }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--muted); }
+
+  @media (max-width: 600px) {
+    header, .summary, .toolbar, .table-wrap, .progress-wrap { padding-left: 16px; padding-right: 16px; }
+    .filter-group { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Cargando gastos...</div>
+</div>
+
+<header>
+  <div class="logo">mis<span>gastos</span>.ar</div>
+  <div class="month-nav">
+    <button onclick="changeMonth(-1)">‹</button>
+    <div id="monthLabel"></div>
+    <button onclick="changeMonth(1)">›</button>
+  </div>
+</header>
+
+<div class="summary" id="summary"></div>
+
+<div class="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-label" id="progressLabel"></div>
+</div>
+
+<div class="toolbar">
+  <button class="btn btn-primary" onclick="openAddModal()">＋ Agregar gasto</button>
+  <div class="filter-group">
+    <button class="btn btn-ghost active" id="fAll" onclick="setFilter('all')">Todos</button>
+    <button class="btn btn-ghost" id="fUnpaid" onclick="setFilter('unpaid')">Pendientes</button>
+    <button class="btn btn-ghost" id="fPaid" onclick="setFilter('paid')">Pagados</button>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Categoría</th>
+        <th>Descripción</th>
+        <th>Vencimiento</th>
+        <th>Monto</th>
+        <th>Estado</th>
+        <th>Comprobante</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="expenseBody"></tbody>
+  </table>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Nuevo <span>gasto</span></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Categoría</label>
+        <select id="fCat"></select>
+      </div>
+      <div class="field">
+        <label>Descripción</label>
+        <input type="text" id="fDesc" placeholder="Ej: Edenor febrero">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Monto ($)</label>
+        <input type="number" id="fAmount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>Fecha vencimiento</label>
+        <input type="date" id="fDue">
+      </div>
+    </div>
+    <div class="field">
+      <label>Notas (opcional)</label>
+      <input type="text" id="fNotes" placeholder="Ej: Período enero-febrero">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('addModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveExpense()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECEIPT VIEW MODAL -->
+<div class="modal-overlay" id="receiptModal">
+  <div class="modal">
+    <div class="modal-title">Comprobante</div>
+    <div id="receiptContent"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('receiptModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+<input type="file" id="fileInput" accept="image/*,application/pdf" style="display:none">
+
+<script>
+  const SUPABASE_URL = 'https://bwfmkkigcbbfesgqessr.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_rVA8LdPkAhoZi4x9TzY6-Q_Ah8bKUo4';
+  const TABLE = 'Gastos';
+
+  const CATS = [
+    { name:'Electricidad', emoji:'⚡', color:'#f5d45a' },
+    { name:'Agua',         emoji:'💧', color:'#5aaaf5' },
+    { name:'Gas',          emoji:'🔥', color:'#f5895a' },
+    { name:'Internet',     emoji:'📡', color:'#c85af5' },
+    { name:'Obra social',  emoji:'🏥', color:'#5af5c8' },
+    { name:'Alquiler',     emoji:'🏠', color:'#f55a8a' },
+    { name:'Expensas',     emoji:'🏢', color:'#8af55a' },
+    { name:'Teléfono',     emoji:'📱', color:'#f5c85a' },
+    { name:'Seguro',       emoji:'🛡️', color:'#5a8af5' },
+    { name:'Tarjeta',      emoji:'💳', color:'#f55ac8' },
+    { name:'Otro',         emoji:'📦', color:'#a0a0a0' },
+  ];
+
+  const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  let currentDate = new Date();
+  let expenses = [];
+  let filter = 'all';
+  let editingId = null;
+  let pendingReceiptId = null;
+
+  // Populate cat select
+  const catSelect = document.getElementById('fCat');
+  CATS.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.name;
+    opt.textContent = `${c.emoji} ${c.name}`;
+    catSelect.appendChild(opt);
+  });
+
+  // ── SUPABASE HELPERS ─────────────────────────────────────
+  async function sbFetch(path, options = {}) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      ...options,
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+        ...(options.headers || {})
+      }
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err);
+    }
+    const text = await res.text();
+    return text ? JSON.parse(text) : [];
+  }
+
+  async function loadExpenses() {
+    const key = monthKey(currentDate);
+    const data = await sbFetch(`${TABLE}?month=eq.${key}&order=created_at.asc`);
+    expenses = data;
+  }
+
+  async function insertExpense(exp) {
+    return await sbFetch(TABLE, { method: 'POST', body: JSON.stringify(exp) });
+  }
+
+  async function updateExpense(id, fields) {
+    return await sbFetch(`${TABLE}?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(fields) });
+  }
+
+  async function deleteExpenseDB(id) {
+    return await sbFetch(`${TABLE}?id=eq.${id}`, { method: 'DELETE' });
+  }
+
+  // ── MONTH ────────────────────────────────────────────────
+  function monthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+  }
+
+  async function changeMonth(d) {
+    currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + d, 1);
+    showLoading();
+    await loadExpenses();
+    hideLoading();
+    render();
+  }
+
+  // ── LOADING ──────────────────────────────────────────────
+  function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
+  function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+
+  // ── RENDER ───────────────────────────────────────────────
+  function render() {
+    document.getElementById('monthLabel').textContent = `${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+    const visible = filter === 'all' ? expenses
+      : filter === 'paid' ? expenses.filter(e => e.paid)
+      : expenses.filter(e => !e.paid);
+
+    const total = expenses.reduce((s,e) => s + (e.amount||0), 0);
+    const paid = expenses.filter(e => e.paid).reduce((s,e) => s + (e.amount||0), 0);
+    const pending = total - paid;
+
+    document.getElementById('summary').innerHTML = `
+      <div class="summary-card"><div class="label">Total del mes</div><div class="value yellow">$${fmt(total)}</div></div>
+      <div class="summary-card"><div class="label">Pagado</div><div class="value green">$${fmt(paid)}</div></div>
+      <div class="summary-card"><div class="label">Pendiente</div><div class="value red">$${fmt(pending)}</div></div>
+      <div class="summary-card"><div class="label">Gastos</div><div class="value">${expenses.length}</div></div>
+    `;
+
+    const pct = total > 0 ? Math.round(paid/total*100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `${pct}% pagado · ${expenses.filter(e=>e.paid).length} de ${expenses.length} ítems`;
+
+    const tbody = document.getElementById('expenseBody');
+    if (visible.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="7">No hay gastos para este mes.<br><span style="color:var(--accent);cursor:pointer" onclick="openAddModal()">+ Agregar uno</span></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = visible.map(e => {
+      const cat = CATS.find(c => c.name === e.category) || CATS.at(-1);
+      const dueStr = e.due ? new Date(e.due + 'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '—';
+      const receiptHtml = e.receipt_name
+        ? `<span class="receipt-thumb" onclick="viewReceipt(${e.id})">📎 ${e.receipt_name}</span>`
+        : `<button class="receipt-btn" onclick="attachReceipt(${e.id})">📎 adjuntar</button>`;
+      return `
+        <tr>
+          <td><span class="cat-badge"><span class="cat-dot" style="background:${cat.color}"></span>${cat.emoji} ${cat.name}</span></td>
+          <td>${e.descripcion || '—'}${e.notes ? `<br><span style="color:var(--muted);font-size:11px">${e.notes}</span>` : ''}</td>
+          <td style="color:var(--muted)">${dueStr}</td>
+          <td><span class="amount">$${fmt(e.amount)}</span></td>
+          <td>
+            <div class="status-toggle" onclick="togglePaid(${e.id}, ${e.paid})">
+              <div class="toggle-pill ${e.paid?'paid':''}"></div>
+              <span class="status-text ${e.paid?'paid':''}">${e.paid?'Pagado':'Pendiente'}</span>
+            </div>
+          </td>
+          <td class="receipt-cell">${receiptHtml}</td>
+          <td><div class="actions-cell">
+            <button class="icon-btn" onclick="editExpense(${e.id})" title="Editar">✏️</button>
+            <button class="icon-btn" onclick="deleteExpense(${e.id})" title="Eliminar">🗑</button>
+          </div></td>
+        </tr>`;
+    }).join('');
+  }
+
+  function fmt(n) {
+    return (n||0).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0});
+  }
+
+  // ── FILTER ───────────────────────────────────────────────
+  function setFilter(f) {
+    filter = f;
+    ['all','paid','unpaid'].forEach(x => document.getElementById('f'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x === f));
+    render();
+  }
+
+  // ── MODAL ────────────────────────────────────────────────
+  function openAddModal() {
+    editingId = null;
+    document.getElementById('modalTitle').innerHTML = 'Nuevo <span>gasto</span>';
+    document.getElementById('fCat').value = CATS[0].name;
+    document.getElementById('fDesc').value = '';
+    document.getElementById('fAmount').value = '';
+    document.getElementById('fDue').value = '';
+    document.getElementById('fNotes').value = '';
+    document.getElementById('addModal').classList.add('open');
+  }
+
+  function editExpense(id) {
+    const e = expenses.find(x => x.id === id);
+    if (!e) return;
+    editingId = id;
+    document.getElementById('modalTitle').innerHTML = 'Editar <span>gasto</span>';
+    document.getElementById('fCat').value = e.category;
+    document.getElementById('fDesc').value = e.descripcion || '';
+    document.getElementById('fAmount').value = e.amount || '';
+    document.getElementById('fDue').value = e.due || '';
+    document.getElementById('fNotes').value = e.notes || '';
+    document.getElementById('addModal').classList.add('open');
+  }
+
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  async function saveExpense() {
+    const category = document.getElementById('fCat').value;
+    const descripcion = document.getElementById('fDesc').value.trim();
+    const amount = parseFloat(document.getElementById('fAmount').value) || 0;
+    const due = document.getElementById('fDue').value;
+    const notes = document.getElementById('fNotes').value.trim();
+    const key = monthKey(currentDate);
+
+    try {
+      if (editingId) {
+        await updateExpense(editingId, { category, descripcion, amount, due, notes });
+        notify('✏️ Gasto actualizado');
+      } else {
+        await insertExpense({ month: key, category, descripcion, amount, due, notes, paid: false });
+        notify('✅ Gasto agregado');
+      }
+      closeModal('addModal');
+      await loadExpenses();
+      render();
+    } catch(err) {
+      notify('❌ Error al guardar');
+      console.error(err);
+    }
+  }
+
+  async function deleteExpense(id) {
+    if (!confirm('¿Eliminar este gasto?')) return;
+    try {
+      await deleteExpenseDB(id);
+      await loadExpenses();
+      render();
+      notify('🗑 Gasto eliminado');
+    } catch(err) {
+      notify('❌ Error al eliminar');
+    }
+  }
+
+  async function togglePaid(id, current) {
+    try {
+      await updateExpense(id, { paid: !current });
+      await loadExpenses();
+      render();
+    } catch(err) {
+      notify('❌ Error al actualizar');
+    }
+  }
+
+  // ── RECEIPTS ─────────────────────────────────────────────
+  function attachReceipt(id) {
+    pendingReceiptId = id;
+    document.getElementById('fileInput').click();
+  }
+
+  document.getElementById('fileInput').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file || !pendingReceiptId) return;
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      try {
+        await updateExpense(pendingReceiptId, { receipt_data: ev.target.result, receipt_name: file.name });
+        await loadExpenses();
+        render();
+        notify('📎 Comprobante adjuntado');
+      } catch(err) {
+        notify('❌ Error al adjuntar');
+      }
+      pendingReceiptId = null;
+      document.getElementById('fileInput').value = '';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function viewReceipt(id) {
+    const e = expenses.find(x => x.id === id);
+    if (!e || !e.receipt_data) return;
+    let html = '';
+    if (e.receipt_data.startsWith('data:image')) {
+      html = `<img src="${e.receipt_data}" class="receipt-img" alt="comprobante">`;
+    } else {
+      html = `<p style="color:var(--muted);font-size:13px">Archivo adjunto:</p>
+        <a class="receipt-pdf-link" href="${e.receipt_data}" download="${e.receipt_name||'comprobante'}">⬇ ${e.receipt_name||'Descargar comprobante'}</a>`;
+    }
+    html += `<div style="margin-top:16px">
+      <button class="btn btn-ghost" style="font-size:12px" onclick="removeReceipt(${id})">🗑 Eliminar comprobante</button>
+    </div>`;
+    document.getElementById('receiptContent').innerHTML = html;
+    document.getElementById('receiptModal').classList.add('open');
+  }
+
+  async function removeReceipt(id) {
+    try {
+      await updateExpense(id, { receipt_data: null, receipt_name: null });
+      await loadExpenses();
+      render();
+      closeModal('receiptModal');
+      notify('🗑 Comprobante eliminado');
+    } catch(err) {
+      notify('❌ Error');
+    }
+  }
+
+  // ── NOTIFY ───────────────────────────────────────────────
+  let notifTimer;
+  function notify(msg) {
+    const n = document.getElementById('notif');
+    n.textContent = msg;
+    n.classList.add('show');
+    clearTimeout(notifTimer);
+    notifTimer = setTimeout(() => n.classList.remove('show'), 2500);
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+  });
+
+  // ── INIT ─────────────────────────────────────────────────
+  (async () => {
+    document.getElementById('monthLabel').textContent = `${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+    await loadExpenses();
+    hideLoading();
+    render();
+  })();
+</script>
+</body>
+</html>
