@@ -199,6 +199,7 @@
   <div class="tabs">
     <button class="tab active" onclick="switchTab('gastos')">📋 Gastos</button>
     <button class="tab" onclick="switchTab('analisis')">📊 Análisis</button>
+    <button class="tab" onclick="switchTab('extras')">✨ Extras</button>
   </div>
 </div>
 
@@ -274,6 +275,103 @@
     <div class="chart-section">
       <div class="chart-section-title">Detalle por categoría</div>
       <div id="compareTableWrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EXTRAS VIEW ══ -->
+<div class="view" id="view-extras">
+  <div class="analisis-wrap">
+    <div class="analisis-header">
+      <div class="analisis-title">Gastos <span>extras</span></div>
+      <div class="month-nav" style="background:var(--surface2)">
+        <button onclick="changeMonthExtras(-1)">‹</button>
+        <div id="monthLabelExtras"></div>
+        <button onclick="changeMonthExtras(1)">›</button>
+      </div>
+    </div>
+
+    <!-- resumen extras -->
+    <div class="summary" id="summaryExtras" style="padding:0 0 0 0;margin-bottom:20px"></div>
+
+    <!-- toolbar extras -->
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary" onclick="openAddExtrasModal()">＋ Agregar extra</button>
+      <div class="filter-group">
+        <button class="btn btn-ghost active" id="efAll" onclick="setFilterExtras('all')">Todos</button>
+        <button class="btn btn-ghost" id="efUnpaid" onclick="setFilterExtras('unpaid')">Pendientes</button>
+        <button class="btn btn-ghost" id="efPaid" onclick="setFilterExtras('paid')">Pagados</button>
+      </div>
+    </div>
+
+    <!-- tabla extras -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:500px">
+          <thead>
+            <tr>
+              <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:12px 16px;border-bottom:1px solid var(--border)">Servicio</th>
+              <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:12px 16px;border-bottom:1px solid var(--border)">Descripción</th>
+              <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:12px 16px;border-bottom:1px solid var(--border)">Monto</th>
+              <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:12px 16px;border-bottom:1px solid var(--border)">Estado</th>
+              <th style="border-bottom:1px solid var(--border)"></th>
+            </tr>
+          </thead>
+          <tbody id="extrasBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;padding:12px 16px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted)">
+      ℹ️ Estos gastos son independientes y <strong style="color:var(--text)">no se suman</strong> al total del departamento.
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EXTRAS -->
+<div class="modal-overlay" id="addExtrasModal">
+  <div class="modal">
+    <div class="modal-title" id="extrasModalTitle">Nuevo gasto <span>extra</span></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Servicio</label>
+        <select id="efCat">
+          <option>Netflix</option>
+          <option>Spotify</option>
+          <option>Disney+</option>
+          <option>Amazon Prime</option>
+          <option>HBO Max</option>
+          <option>YouTube Premium</option>
+          <option>Apple Music</option>
+          <option>iCloud</option>
+          <option>Google One</option>
+          <option>Gym / Deporte</option>
+          <option>Suscripción</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Descripción</label>
+        <input type="text" id="efDesc" placeholder="Ej: Plan familiar">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Monto ($)</label>
+        <input type="number" id="efAmount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>Fecha vencimiento</label>
+        <input type="date" id="efDue">
+      </div>
+    </div>
+    <div class="field">
+      <label>Notas (opcional)</label>
+      <input type="text" id="efNotes" placeholder="Ej: Se renueva el 15">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('addExtrasModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveExtra()">Guardar</button>
     </div>
   </div>
 </div>
@@ -370,10 +468,11 @@ CATS.forEach(c => {
 // ── TABS ─────────────────────────────────────────────────
 function switchTab(tab) {
   currentTab = tab;
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['gastos','analisis'][i] === tab));
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['gastos','analisis','extras'][i] === tab));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(`view-${tab}`).classList.add('active');
   if (tab === 'analisis') renderAnalisis();
+  if (tab === 'extras') renderExtras();
 }
 
 // ── SUPABASE ─────────────────────────────────────────────
@@ -818,10 +917,142 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
   o.addEventListener('click', e=>{ if(e.target===o) o.classList.remove('open'); });
 });
 
+// ── EXTRAS ───────────────────────────────────────────────
+const TABLE_EXTRAS = 'GastosExtras';
+let extrasDate = new Date();
+let extras = [];
+let filterExtras = 'all';
+let editingExtraId = null;
+
+const EXTRAS_CATS = {
+  'Netflix':'🎬','Spotify':'🎵','Disney+':'🏰','Amazon Prime':'📦',
+  'HBO Max':'🎭','YouTube Premium':'▶️','Apple Music':'🍎','iCloud':'☁️',
+  'Google One':'🔵','Gym / Deporte':'💪','Suscripción':'🔄','Otro':'📦'
+};
+
+async function loadExtras() {
+  const key = monthKey(extrasDate);
+  extras = await sbFetch(`${TABLE_EXTRAS}?month=eq.${key}&order=created_at.asc`);
+}
+
+async function changeMonthExtras(d) {
+  extrasDate = new Date(extrasDate.getFullYear(), extrasDate.getMonth() + d, 1);
+  await loadExtras();
+  renderExtras();
+}
+
+function setFilterExtras(f) {
+  filterExtras = f;
+  ['all','paid','unpaid'].forEach(x => document.getElementById('ef'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===f));
+  renderExtras();
+}
+
+function renderExtras() {
+  document.getElementById('monthLabelExtras').textContent = `${MONTHS[extrasDate.getMonth()]} ${extrasDate.getFullYear()}`;
+  const visible = filterExtras==='all' ? extras : filterExtras==='paid' ? extras.filter(e=>e.paid) : extras.filter(e=>!e.paid);
+  const total = extras.reduce((s,e)=>s+(e.amount||0),0);
+  const paid = extras.filter(e=>e.paid).reduce((s,e)=>s+(e.amount||0),0);
+
+  document.getElementById('summaryExtras').innerHTML = `
+    <div class="summary-card"><div class="label">Total extras</div><div class="value yellow">$${fmt(total)}</div></div>
+    <div class="summary-card"><div class="label">Pagado</div><div class="value green">$${fmt(paid)}</div></div>
+    <div class="summary-card"><div class="label">Pendiente</div><div class="value red">$${fmt(total-paid)}</div></div>
+    <div class="summary-card"><div class="label">Servicios</div><div class="value">${extras.length}</div></div>
+  `;
+
+  const tbody = document.getElementById('extrasBody');
+  if (visible.length===0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted);font-size:13px">No hay gastos extras este mes.<br><span style="color:var(--accent);cursor:pointer" onclick="openAddExtrasModal()">+ Agregar uno</span></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = visible.map(e => {
+    const icon = EXTRAS_CATS[e.category] || '📦';
+    const dueStr = e.due ? new Date(e.due+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) : '';
+    return `<tr style="border-bottom:1px solid var(--border);transition:background .12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <td style="padding:14px 16px;font-size:13px">${icon} ${e.category}</td>
+      <td style="padding:14px 16px;font-size:13px;color:var(--muted)">${e.descripcion||'—'}${e.notes?`<br><span style="font-size:11px">${e.notes}</span>`:''}${dueStr?`<br><span style="font-size:10px;color:var(--muted)">Vence: ${dueStr}</span>`:''}</td>
+      <td style="padding:14px 16px"><span class="amount">$${fmt(e.amount)}</span></td>
+      <td style="padding:14px 16px">
+        <div class="status-toggle" onclick="togglePaidExtra(${e.id},${e.paid})">
+          <div class="toggle-pill ${e.paid?'paid':''}"></div>
+          <span class="status-text ${e.paid?'paid':''}">${e.paid?'Pagado':'Pendiente'}</span>
+        </div>
+      </td>
+      <td style="padding:14px 16px"><div class="actions-cell">
+        <button class="icon-btn" onclick="editExtra(${e.id})">✏️</button>
+        <button class="icon-btn" onclick="deleteExtra(${e.id})">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddExtrasModal() {
+  editingExtraId = null;
+  document.getElementById('extrasModalTitle').innerHTML = 'Nuevo gasto <span>extra</span>';
+  document.getElementById('efCat').selectedIndex = 0;
+  document.getElementById('efDesc').value = '';
+  document.getElementById('efAmount').value = '';
+  document.getElementById('efDue').value = '';
+  document.getElementById('efNotes').value = '';
+  document.getElementById('addExtrasModal').classList.add('open');
+}
+
+function editExtra(id) {
+  const e = extras.find(x=>x.id===id);
+  if (!e) return;
+  editingExtraId = id;
+  document.getElementById('extrasModalTitle').innerHTML = 'Editar gasto <span>extra</span>';
+  document.getElementById('efCat').value = e.category;
+  document.getElementById('efDesc').value = e.descripcion||'';
+  document.getElementById('efAmount').value = e.amount||'';
+  document.getElementById('efDue').value = e.due||'';
+  document.getElementById('efNotes').value = e.notes||'';
+  document.getElementById('addExtrasModal').classList.add('open');
+}
+
+async function saveExtra() {
+  const category = document.getElementById('efCat').value;
+  const descripcion = document.getElementById('efDesc').value.trim();
+  const amount = parseFloat(document.getElementById('efAmount').value)||0;
+  const due = document.getElementById('efDue').value;
+  const notes = document.getElementById('efNotes').value.trim();
+  const key = monthKey(extrasDate);
+  try {
+    if (editingExtraId) {
+      await sbFetch(`${TABLE_EXTRAS}?id=eq.${editingExtraId}`, { method:'PATCH', body: JSON.stringify({category,descripcion,amount,due,notes}) });
+      notify('✏️ Extra actualizado');
+    } else {
+      await sbFetch(TABLE_EXTRAS, { method:'POST', body: JSON.stringify({month:key,category,descripcion,amount,due,notes,paid:false}) });
+      notify('✅ Extra agregado');
+    }
+    closeModal('addExtrasModal');
+    await loadExtras();
+    renderExtras();
+  } catch(err) { notify('❌ Error al guardar'); }
+}
+
+async function deleteExtra(id) {
+  if (!confirm('¿Eliminar este gasto extra?')) return;
+  try {
+    await sbFetch(`${TABLE_EXTRAS}?id=eq.${id}`, { method:'DELETE' });
+    await loadExtras();
+    renderExtras();
+    notify('🗑 Extra eliminado');
+  } catch(err) { notify('❌ Error'); }
+}
+
+async function togglePaidExtra(id, current) {
+  try {
+    await sbFetch(`${TABLE_EXTRAS}?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({paid:!current}) });
+    await loadExtras();
+    renderExtras();
+  } catch(err) { notify('❌ Error'); }
+}
+
 // ── INIT ─────────────────────────────────────────────────
 (async () => {
   document.getElementById('monthLabel').textContent = `${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-  await Promise.all([loadExpenses(), loadAllExpenses()]);
+  await Promise.all([loadExpenses(), loadAllExpenses(), loadExtras()]);
   hideLoading();
   render();
 })();
